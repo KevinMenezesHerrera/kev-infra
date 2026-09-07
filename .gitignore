@@ -1,0 +1,32 @@
+# Secrets / credentials
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# SSH private material
+id_rsa
+id_ed25519
+*_auth_ed25519
+*_sign_ed25519
+
+# Secret directories
+secrets/
+credentials/
+
+# Local overrides
+*.local
+docker-compose.override.yml
+compose.override.yml
+
+# Temporary files
+*.tmp
+*.swp
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
