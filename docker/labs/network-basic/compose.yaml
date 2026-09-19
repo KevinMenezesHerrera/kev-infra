@@ -1,0 +1,28 @@
+services:
+  service-a:
+    image: busybox:1.37.0
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /www
+        echo "hello from service-a" > /www/index.html
+        httpd -f -p 8080 -h /www
+    networks:
+      - lab_a
+
+  client-a:
+    image: busybox:1.37.0
+    command: ["sleep", "infinity"]
+    networks:
+      - lab_a
+
+  outsider:
+    image: busybox:1.37.0
+    command: ["sleep", "infinity"]
+    networks:
+      - lab_b
+
+networks:
+  lab_a:
+  lab_b:

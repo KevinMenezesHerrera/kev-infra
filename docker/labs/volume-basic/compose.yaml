@@ -1,0 +1,9 @@
+services:
+  stateful:
+    image: busybox:1.37.0
+    command: ["sleep", "infinity"]
+    volumes:
+      - lab_data:/data
+
+volumes:
+  lab_data:
