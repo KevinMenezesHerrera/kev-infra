@@ -1,0 +1,291 @@
+# Architecture
+
+Este documento descreve a arquitetura atual do ambiente `kev-dev`.
+
+Diferente de um baseline, este é um documento vivo:
+ele deve ser atualizado sempre que a arquitetura mudar.
+
+---
+
+## Visão geral
+
+    Ubuntu Host
+    │
+    ├── Aplicações nativas
+    │   ├── Brave Browser
+    │   ├── Git
+    │   ├── OpenSSH client
+    │   ├── curl
+    │   ├── wget
+    │   └── UFW
+    │
+    ├── Identidade Git/GitHub
+    │   ├── SSH authentication
+    │   │   └── ~/.ssh/github_auth_ed25519
+    │   │
+    │   └── SSH commit signing
+    │       └── ~/.ssh/github_sign_ed25519
+    │
+    ├── Docker Engine
+    │   │
+    │   ├── Serviços rootful do sistema
+    │   │   ├── docker.service       disabled / inactive
+    │   │   ├── docker.socket        disabled / inactive
+    │   │   └── containerd.service   disabled / inactive
+    │   │
+    │   └── Docker rootless
+    │       ├── usuário: kev-dev
+    │       ├── systemd --user docker.service
+    │       ├── context: rootless
+    │       ├── socket: /run/user/1000/docker.sock
+    │       ├── storage: ~/.local/share/docker
+    │       ├── storage driver: overlayfs
+    │       └── cgroup: v2
+    │
+    ├── Armazenamento
+    │   ├── NVMe
+    │   ├── LVM vg_nvme
+    │   │   ├── LV ubuntu
+    │   │   ├── LV shared
+    │   │   └── espaço livre reservado
+    │   └── /shared
+    │
+    └── ~/infra
+        ├── bootstrap/
+        ├── docker/
+        │   └── labs/
+        │       ├── network-basic/
+        │       └── volume-basic/
+        ├── docs/
+        │   ├── BASELINE-0.md
+        │   ├── ADR-0001-docker-rootless.md
+        │   ├── LAB-0001-docker-network-volume.md
+        │   └── ARCHITECTURE.md
+        ├── scripts/
+        └── system/
+
+---
+
+## Host
+
+O Ubuntu funciona como base mínima de execução.
+
+Ferramentas específicas de projetos devem, sempre que possível,
+ficar fora do host e ser executadas em containers.
+
+Exemplos de software que normalmente não deve ser instalado
+diretamente no Ubuntu:
+
+- versões específicas de Python;
+- Node.js;
+- compiladores específicos de projetos;
+- PostgreSQL;
+- Redis;
+- toolchains embarcadas;
+- SDKs específicos.
+
+Software nativo deve existir apenas quando fizer sentido como
+capacidade do próprio host.
+
+---
+
+## Docker
+
+O Docker Engine principal utiliza modo rootless.
+
+O usuário `kev-dev` não pertence ao grupo `docker` para controlar
+um daemon rootful.
+
+Os serviços Docker/containerd rootful do sistema estão desativados.
+
+O daemon utilizado pertence ao ambiente `systemd --user`.
+
+### Socket
+
+    /run/user/1000/docker.sock
+
+### Dados persistentes internos do Docker
+
+    /home/kev-dev/.local/share/docker
+
+### Storage driver
+
+    overlayfs
+
+---
+
+## Modelo de containers
+
+Cada mecanismo deve ser usado para sua finalidade correta:
+
+    imagem/container
+        → executáveis, processos e ferramentas
+
+    bind mount / volume
+        → arquivos e dados
+
+    rede
+        → comunicação entre processos
+
+    secret
+        → credenciais e material sensível
+
+Containers devem ser considerados descartáveis.
+
+Dados que precisam sobreviver à destruição de containers
+devem ficar em volumes ou em bind mounts deliberadamente definidos.
+
+---
+
+## Redes
+
+O padrão arquitetural é isolamento.
+
+Projetos não devem ser conectados automaticamente a uma única
+rede global.
+
+A direção atual da arquitetura é:
+
+    redes internas por projeto
+        +
+    redes compartilhadas por finalidade
+        +
+    containers conectados a múltiplas redes somente quando necessário
+
+Exemplo conceitual:
+
+    brsa_internal
+    ├── api
+    ├── postgres
+    └── redis
+
+    metra_internal
+    ├── api
+    └── simulator
+
+    proxy_net
+    ├── reverse-proxy
+    ├── brsa-frontend
+    └── forgejo
+
+Um container pode pertencer a mais de uma rede quando houver
+necessidade explícita.
+
+Bancos de dados e serviços internos não devem ser colocados em
+redes compartilhadas sem necessidade.
+
+---
+
+## Containers de ferramentas
+
+Containers de ferramentas não fornecem suas ferramentas pela rede.
+
+Por exemplo, um container Python não fornece o executável `python`
+a outro container apenas por estar na mesma rede.
+
+O modelo esperado é:
+
+    código do projeto
+          │
+          │ bind mount / volume
+          ▼
+    container dev-python
+          │
+          └── executa Python localmente
+
+ou:
+
+    código do projeto
+       ├── dev-python
+       ├── dev-c
+       └── dev-embedded
+
+Os containers de ferramentas podem ser conectados à rede de um
+projeto quando precisarem acessar seus serviços.
+
+---
+
+## Laboratórios já validados
+
+### LAB-0001
+
+Foram validados:
+
+- comunicação por DNS entre containers da mesma rede;
+- isolamento entre redes distintas;
+- conexão dinâmica de um container a outra rede;
+- restauração do isolamento após desconexão;
+- persistência por volume nomeado;
+- recriação de container sem perda do volume.
+
+---
+
+## Documentação
+
+Tipos de documentos utilizados:
+
+    ARCHITECTURE
+        estado arquitetural atual e vivo
+
+    BASELINE
+        fotografia de um estado específico da máquina
+
+    ADR
+        decisão arquitetural e motivação
+
+    LAB
+        experimento, procedimento e resultado
+
+Tipos planejados:
+
+    RUNBOOK
+        procedimento operacional repetível
+
+    POLICY
+        regra que deve ser obedecida
+
+    CONVENTIONS
+        padrões de nomes, estrutura e organização
+
+---
+
+## Princípios arquiteturais
+
+- o host deve permanecer mínimo;
+- privilégio é exceção, não padrão;
+- infraestrutura deve ser reproduzível;
+- alterações importantes devem ser documentadas;
+- projetos devem ser isolados por padrão;
+- comunicação entre redes deve ser explícita;
+- containers são descartáveis;
+- dados persistentes devem ter armazenamento explícito;
+- secrets não entram no Git;
+- infraestrutura deve poder ser reconstruída a partir de código e documentação.
+
+---
+
+## Manutenção deste mapa
+
+Este arquivo é um documento curado por humanos.
+
+Ele descreve a arquitetura, as relações entre os componentes e as
+regras que não podem ser inferidas apenas inspecionando a máquina.
+
+Mudanças estruturais devem considerar se este documento também
+precisa ser atualizado.
+
+Futuramente, fatos observáveis do sistema poderão ser registrados
+automaticamente em um inventário gerado, por exemplo:
+
+    docs/generated/CURRENT-STATE.md
+
+A intenção é separar:
+
+    ARCHITECTURE.md
+        → arquitetura, relações e intenção
+
+    CURRENT-STATE.md
+        → estado observado automaticamente na máquina
+
+ADRs, LABs e baselines permanecem registros históricos e não devem
+ser reescritos apenas para acompanhar o estado atual.
