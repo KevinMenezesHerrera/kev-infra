@@ -59,8 +59,10 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         ├── docs/
         │   ├── BASELINE-0.md
         │   ├── ADR-0001-docker-rootless.md
+        │   ├── ADR-0002-docker-network-strategy.md
         │   ├── LAB-0001-docker-network-volume.md
-        │   └── ARCHITECTURE.md
+        │   ├── ARCHITECTURE.md
+        │   └── CONVENTIONS.md
         ├── scripts/
         └── system/
 
