@@ -318,3 +318,31 @@ O laboratório deverá provar que:
   utilizada.
 
 Esse experimento será registrado como LAB-0002.
+
+---
+
+## Validação concluída
+
+A validação prevista neste ADR foi executada no:
+
+    LAB-0002: Rede externa compartilhada entre projetos Compose
+
+Resultado:
+
+    PASS
+
+O experimento confirmou que:
+
+- dois projetos Compose independentes podem utilizar a mesma rede externa;
+- os serviços podem se comunicar por DNS e HTTP nessa rede;
+- a remoção de um projeto não remove a rede externa;
+- o outro projeto continua funcionando;
+- serviços removidos deixam de ser resolvidos pelo DNS da rede;
+- uma rede com endpoints ativos não pode ser removida;
+- após a remoção dos projetos, a rede externa continua existindo;
+- sem endpoints ativos, a rede pode ser removida explicitamente.
+
+A validação confirma o mecanismo técnico previsto por esta decisão.
+
+Ela não implica a criação de uma rede global nem elimina a exigência
+de que redes compartilhadas tenham finalidade explícita.

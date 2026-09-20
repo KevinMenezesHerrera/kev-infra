@@ -158,21 +158,34 @@ Valida:
 - persistência após remoção do container;
 - reutilização do volume por um container recriado.
 
+### shared-network
+
+Valida:
+
+- uso de uma rede `external: true`;
+- compartilhamento da mesma rede por projetos Compose independentes;
+- comunicação por DNS e HTTP entre os projetos;
+- independência do ciclo de vida dos projetos;
+- preservação da rede após `docker compose down`;
+- recusa de remoção da rede enquanto existirem endpoints ativos;
+- remoção explícita da rede quando não estiver mais em uso.
+
 Os resultados estão documentados em:
 
     docs/LAB-0001-docker-network-volume.md
+    docs/LAB-0002-shared-external-network.md
 
 ---
 
 ## Status das decisões de rede
 
-A estratégia apresentada neste documento representa a direção atual
-da arquitetura.
+A estratégia de segmentação de redes foi formalizada no:
 
-A convenção definitiva para redes internas, redes compartilhadas e
-conectividade entre projetos será registrada em um ADR específico
-após validação experimental.
+    docs/ADR-0002-docker-network-strategy.md
 
-Até essa decisão, exemplos como `proxy_net`, `monitoring_net` e redes
-por projeto devem ser tratados como modelos conceituais, não como
-infraestrutura já existente.
+O mecanismo de rede externa compartilhada entre projetos Compose
+independentes foi validado experimentalmente no LAB-0002.
+
+Exemplos como `proxy_net`, `monitoring_net` e outras redes
+compartilhadas por finalidade continuam sendo modelos conceituais até
+que exista uma necessidade real de implementação.

@@ -55,12 +55,14 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         ├── docker/
         │   └── labs/
         │       ├── network-basic/
-        │       └── volume-basic/
+        │       ├── volume-basic/
+        │       └── shared-network/
         ├── docs/
         │   ├── BASELINE-0.md
         │   ├── ADR-0001-docker-rootless.md
         │   ├── ADR-0002-docker-network-strategy.md
         │   ├── LAB-0001-docker-network-volume.md
+        │   ├── LAB-0002-shared-external-network.md
         │   ├── ARCHITECTURE.md
         │   └── CONVENTIONS.md
         ├── scripts/
@@ -219,6 +221,19 @@ Foram validados:
 - restauração do isolamento após desconexão;
 - persistência por volume nomeado;
 - recriação de container sem perda do volume.
+
+### LAB-0002
+
+Foram validados:
+
+- uso de uma rede externa por projetos Compose independentes;
+- comunicação por DNS e HTTP entre projetos distintos;
+- independência do ciclo de vida dos projetos;
+- preservação da rede após `docker compose down`;
+- remoção de serviços do DNS após sua destruição;
+- proteção contra remoção da rede enquanto existirem endpoints ativos;
+- persistência da rede após a remoção de todos os projetos;
+- remoção explícita da rede quando ela deixa de estar em uso.
 
 ---
 
