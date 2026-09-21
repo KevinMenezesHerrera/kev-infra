@@ -71,6 +71,9 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         │   ├── ARCHITECTURE.md
         │   └── CONVENTIONS.md
         ├── scripts/
+        │   ├── check-infra
+        │   └── tests/
+        │       └── check-infra-test
         └── system/
 
 ---

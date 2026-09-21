@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# Verificação somente leitura. Não corrige configuração nem altera serviços.
+# Uso: ./scripts/check-infra (a partir de qualquer diretório).
+# Saída: 0 = obrigatórios atendidos; 1 = falha ou obrigatório não verificável.
+# O estado Git é informativo e nunca altera o código de saída.
+
+# Separada para permitir testes isolados sem depender do socket do host.
+is_unix_socket() {
+    [[ -S "$1" ]]
+}
+
+# Subshell mantém opções, contadores e exit locais à execução.
+main() (
+    set -u
+    set -o pipefail
+
+    failures=0
+    warnings=0
+    socket="/run/user/$UID/docker.sock"
+    repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+
+    report() {
+        printf '%s: %s\n' "$1" "$2"
+        case "$1" in
+            FAIL) failures=$((failures + 1)) ;;
+            WARN) warnings=$((warnings + 1)) ;;
+        esac
+    }
+
+    if is_unix_socket "$socket"; then
+        report PASS "Socket Unix existe: $socket"
+    else
+        report FAIL "Socket Unix ausente ou caminho não é um socket: $socket"
+    fi
+
+    if command -v docker >/dev/null 2>&1; then
+        if context=$(docker context show 2>/dev/null); then
+            if [[ "$context" == rootless ]]; then
+                report PASS 'Contexto Docker ativo: rootless'
+            else
+                report FAIL 'Contexto Docker ativo diferente de rootless'
+            fi
+        else
+            report FAIL 'Não foi possível consultar o contexto Docker ativo'
+        fi
+
+        # Inspecionar contexto não contata o daemon. Nunca consultar endpoints
+        # arbitrários: eles podem apontar para um daemon rootful ou remoto.
+        if endpoint=$(docker context inspect rootless --format '{{.Endpoints.docker.Host}}' 2>/dev/null) &&
+            [[ "$endpoint" == "unix://$socket" ]]; then
+            report PASS 'Contexto rootless aponta para o socket local esperado'
+        else
+            report FAIL 'Contexto rootless ausente ou aponta para outro endpoint'
+        fi
+
+        # DOCKER_HOST pode sobrepor o contexto persistido quando DOCKER_CONTEXT
+        # não está definido. Não imprimir seu valor: pode conter dados sensíveis.
+        if [[ -z "${DOCKER_CONTEXT:-}" && -n "${DOCKER_HOST:-}" &&
+            "$DOCKER_HOST" != "unix://$socket" ]]; then
+            report FAIL 'DOCKER_HOST sobrepõe o contexto com outro endpoint'
+        fi
+
+        # Ambiente alterado apenas no subshell; --host fixa o socket local.
+        # Somente SecurityOptions é lido, sem inventário ou credenciais.
+        if ! is_unix_socket "$socket"; then
+            report FAIL 'docker info não consultado: socket local indisponível'
+        elif security_options=$(
+            unset DOCKER_HOST DOCKER_CONTEXT DOCKER_TLS DOCKER_TLS_VERIFY DOCKER_CERT_PATH
+            docker --host "unix://$socket" info \
+                --format '{{range .SecurityOptions}}{{println .}}{{end}}' 2>/dev/null
+        ); then
+            rootless=false
+            while IFS= read -r option; do
+                if [[ "$option" == name=rootless || "$option" == name=rootless,* ]]; then
+                    rootless=true
+                fi
+            done <<< "$security_options"
+            if [[ "$rootless" == true ]]; then
+                report PASS 'docker info indica execução rootless'
+            else
+                report FAIL 'docker info não indica execução rootless'
+            fi
+        else
+            report FAIL 'Não foi possível consultar docker info pelo socket local'
+        fi
+    else
+        report FAIL 'Docker CLI indisponível: verificações Docker obrigatórias não realizadas'
+    fi
+
+    check_unit() {
+        local scope=$1 unit=$2 expected=$3 properties key value
+        local loaded='' enabled='' active=''
+        if ! properties=$(systemctl "$scope" show "$unit" \
+            --property=LoadState,UnitFileState,ActiveState 2>/dev/null); then
+            report FAIL "Não foi possível consultar systemd $scope $unit (acesso ao bus necessário)"
+            return
+        fi
+        while IFS='=' read -r key value; do
+            case "$key" in
+                LoadState) loaded=$value ;;
+                UnitFileState) enabled=$value ;;
+                ActiveState) active=$value ;;
+            esac
+        done <<< "$properties"
+
+        # Estados ausentes, masked, failed e outros não equivalem ao contrato
+        # literal disabled/inactive definido para esta primeira versão.
+        if [[ "$loaded" != loaded ]]; then
+            report FAIL "systemd $scope $unit: LoadState=${loaded:-desconhecido}; esperado loaded"
+        elif [[ "$expected" == inactive ]]; then
+            if [[ "$enabled" == disabled && "$active" == inactive ]]; then
+                report PASS "systemd $scope $unit: disabled/inactive"
+            else
+                report FAIL "systemd $scope $unit: ${enabled:-desconhecido}/${active:-desconhecido}; esperado disabled/inactive"
+            fi
+        elif [[ "$active" == active ]]; then
+            report PASS "systemd $scope $unit: active"
+        else
+            report FAIL "systemd $scope $unit: ${active:-desconhecido}; esperado active"
+        fi
+    }
+
+    if command -v systemctl >/dev/null 2>&1; then
+        for unit in docker.service docker.socket containerd.service; do
+            check_unit --system "$unit" inactive
+        done
+        check_unit --user docker.service active
+    else
+        report FAIL 'systemctl indisponível: verificações obrigatórias dos serviços não realizadas'
+    fi
+
+    # Desabilitar locks opcionais impede que git status atualize o índice.
+    # Não consultar conteúdo dos arquivos nem executar comandos de escrita Git.
+    if [[ -n "$repo_dir" ]] && command -v git >/dev/null 2>&1 &&
+        git_state=$(git --no-optional-locks -C "$repo_dir" status \
+            --short --untracked-files=all --ignore-submodules=none 2>/dev/null); then
+        if [[ -z "$git_state" ]]; then
+            report PASS 'Working tree Git limpo (informativo)'
+        else
+            report WARN 'Working tree Git possui alterações (informativo):'
+            printf '%s\n' "$git_state"
+        fi
+    else
+        report WARN 'Não foi possível consultar o estado Git (informativo)'
+    fi
+
+    printf '\nResumo: %d FAIL, %d WARN\n' "$failures" "$warnings"
+    if (( failures > 0 )); then
+        exit 1
+    fi
+    exit 0
+)
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
