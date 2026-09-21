@@ -14,8 +14,13 @@ O Docker utilizado pelo ambiente é executado em modo rootless.
     └── labs/
         ├── network-basic/
         │   └── compose.yaml
-        └── volume-basic/
-            └── compose.yaml
+        ├── volume-basic/
+        │   └── compose.yaml
+        └── shared-network/
+            ├── project-a/
+            │   └── compose.yaml
+            └── project-b/
+                └── compose.yaml
 
 Os laboratórios existentes servem para validar propriedades da
 infraestrutura antes que essas propriedades sejam adotadas na

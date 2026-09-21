@@ -17,7 +17,11 @@ ele deve ser atualizado sempre que a arquitetura mudar.
     │   ├── OpenSSH client
     │   ├── curl
     │   ├── wget
-    │   └── UFW
+    │   ├── UFW
+    │   └── Codex CLI
+    │       ├── command: ~/.local/bin/codex
+    │       ├── state/config: ~/.codex
+    │       └── credentials: keyring configurado e validado
     │
     ├── Identidade Git/GitHub
     │   ├── SSH authentication
@@ -51,6 +55,7 @@ ele deve ser atualizado sempre que a arquitetura mudar.
     │   └── /shared
     │
     └── ~/infra
+        ├── AGENTS.md
         ├── bootstrap/
         ├── docker/
         │   └── labs/
