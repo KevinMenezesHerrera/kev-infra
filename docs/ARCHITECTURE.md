@@ -68,6 +68,7 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         │   ├── ADR-0002-docker-network-strategy.md
         │   ├── LAB-0001-docker-network-volume.md
         │   ├── LAB-0002-shared-external-network.md
+        │   ├── LAB-0003-git-worktree-agent-workflow.md
         │   ├── ARCHITECTURE.md
         │   └── CONVENTIONS.md
         ├── scripts/
