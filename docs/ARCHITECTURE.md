@@ -69,6 +69,7 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         │   ├── LAB-0001-docker-network-volume.md
         │   ├── LAB-0002-shared-external-network.md
         │   ├── LAB-0003-git-worktree-agent-workflow.md
+        │   ├── RUNBOOK-agent-worktree.md
         │   ├── ARCHITECTURE.md
         │   └── CONVENTIONS.md
         ├── scripts/
@@ -262,10 +263,10 @@ Tipos de documentos utilizados:
     LAB
         experimento, procedimento e resultado
 
-Tipos planejados:
-
     RUNBOOK
         procedimento operacional repetível
+
+Tipos planejados:
 
     POLICY
         regra que deve ser obedecida
