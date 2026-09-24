@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo=$(cd -- "$(dirname -- "$0")/../../.." && pwd)
+"$repo/scripts/check-infra"
+[[ $(id -u) == 1000 ]]
+unset DOCKER_HOST DOCKER_CONTEXT DOCKER_TLS DOCKER_TLS_VERIFY DOCKER_CERT_PATH
+docker_local() { docker --host unix:///run/user/1000/docker.sock "$@"; }
+id
+grep "^$(id -un):" /etc/subuid /etc/subgid
+scratch=$(mktemp -d "$repo/docker/labs/rootless-uid/scratch.XXXXXXXX")
+# Only this empty experimental directory is made writable to subordinate IDs.
+chmod 0777 "$scratch"
+cleanup() {
+    rm -f -- "$scratch/uid0" "$scratch/uid1000"
+    rmdir -- "$scratch"
+}
+trap cleanup EXIT
+for identity in 0:0 1000:1000; do
+    docker_local run --rm --pull never --network none --cap-drop ALL \
+        --security-opt no-new-privileges --user "$identity" \
+        --mount "type=bind,src=$scratch,dst=/experiment" busybox:1.37.0 \
+        sh -ec 'id; cat /proc/self/uid_map; cat /proc/self/gid_map; touch /experiment/uid$(id -u)'
+done
+stat -c '%n uid=%u gid=%g owner=%U group=%G' "$scratch/uid0" "$scratch/uid1000"
+[[ $(stat -c '%u:%g' "$scratch/uid0") == 1000:1000 ]]
+[[ $(stat -c '%u:%g' "$scratch/uid1000") == 100999:100999 ]]
+echo 'PASS: container 0:0 -> host 1000:1000; container 1000:1000 -> host 100999:100999'
