@@ -1,0 +1,42 @@
+x-development: &development
+  image: kev-infra/dev-python:3.13.7
+  build:
+    context: .
+  user: "0:0"
+  working_dir: /workspace
+  network_mode: none
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 256m
+  cpus: 0.5
+  pids_limit: 64
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,size=64m,mode=1777
+
+services:
+  edit:
+    <<: *development
+    profiles: [edit]
+    volumes:
+      - type: bind
+        source: ${DEV_WORKSPACE:-.}
+        target: /workspace
+        bind:
+          create_host_path: false
+  test:
+    <<: *development
+    profiles: [test]
+    volumes:
+      - type: bind
+        source: ${DEV_WORKSPACE:-.}
+        target: /workspace
+        read_only: true
+        bind:
+          create_host_path: false
+  sandbox:
+    <<: *development
+    profiles: [sandbox]
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m,mode=1777
+      - /workspace:rw,nosuid,nodev,size=64m,mode=0755
