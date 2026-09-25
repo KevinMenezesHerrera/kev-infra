@@ -11,7 +11,13 @@ O Docker utilizado pelo ambiente é executado em modo rootless.
 
     docker/
     ├── README.md
+    ├── tools/python/
+    │   ├── Dockerfile
+    │   ├── compose.yaml
+    │   └── README.md
     └── labs/
+        ├── rootless-uid/
+        ├── dev-python/
         ├── network-basic/
         │   └── compose.yaml
         ├── volume-basic/
@@ -43,8 +49,8 @@ A estrutura poderá evoluir aproximadamente para:
     └── services/
         └── ...
 
-Esses diretórios planejados ainda não representam serviços ou
-containers existentes.
+tools/python já está implementado. Os demais diretórios planejados ainda
+não representam serviços ou containers existentes.
 
 Eles só devem ser criados quando houver implementação correspondente.
 
@@ -194,3 +200,16 @@ independentes foi validado experimentalmente no LAB-0002.
 Exemplos como `proxy_net`, `monitoring_net` e outras redes
 compartilhadas por finalidade continuam sendo modelos conceituais até
 que exista uma necessidade real de implementação.
+
+## Fase 6 implementada
+
+- `tools/python/`: Dockerfile fixado, Compose EDIT/TEST/SANDBOX e instruções.
+- `labs/rootless-uid/`: medição empírica antes da escolha de identidade.
+- `labs/dev-python/`: bind mounts, persistência, modos e limites de recursos.
+- `../scripts/check-dev-python`: validação integrada com build e laboratórios.
+
+O diretório `tools/python` já existe; C, embedded e services continuam planejados.
+A identidade 0:0 no desenvolvimento rootless mapeia nesta máquina para o usuário
+1000:1000 do host (ADR-0003); não é recomendação automática para produção.
+Os resultados estão nos LAB-0004 e LAB-0005. Consulte o README de tools/python
+para comandos e a separação entre código, dependências e caches temporários.

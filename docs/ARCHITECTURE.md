@@ -58,7 +58,10 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         ├── AGENTS.md
         ├── bootstrap/
         ├── docker/
+        │   ├── tools/python/
         │   └── labs/
+        │       ├── rootless-uid/
+        │       ├── dev-python/
         │       ├── network-basic/
         │       ├── volume-basic/
         │       └── shared-network/
@@ -74,6 +77,7 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         │   └── CONVENTIONS.md
         ├── scripts/
         │   ├── check-infra
+        │   ├── check-dev-python
         │   └── tests/
         │       └── check-infra-test
         └── system/
@@ -316,3 +320,38 @@ A intenção é separar:
 
 ADRs, LABs e baselines permanecem registros históricos e não devem
 ser reescritos apenas para acompanhar o estado atual.
+
+## Fundação de desenvolvimento Python — Fase 6
+
+    Ubuntu host (control plane mínimo)
+        ↓
+    Docker rootless (daemon do usuário)
+        ↓
+    dev-python (docker/tools/python)
+        ├── EDIT: diretório escolhido → /workspace (read-write)
+        ├── TEST: diretório escolhido → /workspace (read-only)
+        └── SANDBOX: /workspace temporário, sem projeto do host
+
+Implementado com Python fixado por versão e digest; sem pacotes de aplicação.
+Processos usam 0:0 no namespace rootless, que nesta máquina mapeia para
+1000:1000 no host. Não é root real do Ubuntu. A medição e as limitações estão
+no [ADR-0003](ADR-0003-rootless-development-identity.md) e no LAB-0004.
+
+Todos os modos removem capabilities, bloqueiam novos privilégios, usam rootfs
+read-only e tmpfs para temporários, sem socket Docker nem rede por padrão.
+Limites: 256 MiB, quota de 0,5 CPU e 64 processos. Dependências temporárias e
+cache ficam fora do código; dependências reproduzíveis pertencem a imagens
+derivadas de cada projeto. Uso e limitações: docker/tools/python/README.md.
+
+Desenvolvimento local privilegia interoperabilidade dos bind mounts. Produção
+exige decisão própria de menor privilégio e usuário não-root quando apropriado.
+SANDBOX reduz acesso ao host e não recebe o projeto; não autoriza execução
+irrestrita de código hostil.
+
+Git protege código e configuração versionados; containers são descartáveis.
+Volumes podem conter estado não recuperável pelo Git: apagar um container não
+é apagar seu volume, e a remoção de volumes é uma operação distinta e sensível.
+
+`./scripts/check-dev-python` constrói e verifica esta fundação, incluindo
+mapeamento UID/GID, bind mounts, persistência, modos e cgroups. O check-infra
+continua somente leitura; laboratórios com criação de recursos são explícitos.
