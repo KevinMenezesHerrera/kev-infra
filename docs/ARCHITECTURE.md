@@ -59,9 +59,11 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         ├── bootstrap/
         ├── docker/
         │   ├── tools/python/
+        │   ├── tools/c/
         │   └── labs/
         │       ├── rootless-uid/
         │       ├── dev-python/
+        │       ├── dev-c/
         │       ├── network-basic/
         │       ├── volume-basic/
         │       └── shared-network/
@@ -78,6 +80,7 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         ├── scripts/
         │   ├── check-infra
         │   ├── check-dev-python
+        │   ├── check-dev-c
         │   └── tests/
         │       └── check-infra-test
         └── system/
@@ -355,3 +358,23 @@ Volumes podem conter estado não recuperável pelo Git: apagar um container não
 `./scripts/check-dev-python` constrói e verifica esta fundação, incluindo
 mapeamento UID/GID, bind mounts, persistência, modos e cgroups. O check-infra
 continua somente leitura; laboratórios com criação de recursos são explícitos.
+
+## Desenvolvimento C nativo Linux — Fase 7A
+
+`docker/tools/c` aplica a fundação da Fase 6 a GCC, make, CMake, Ninja,
+pkg-config e GDB. A base Debian Bookworm slim é fixada por tag/digest e os
+pacotes por snapshot datado. Os modos EDIT, TEST e SANDBOX preservam identidade,
+limites, mounts e proteções do dev-python, sem decisões novas de privilégio.
+
+Código e artefatos duráveis ficam no bind autorizado em EDIT. TEST monta esse
+projeto read-only e executa binários previamente compilados; builds temporários
+podem ir para `/tmp`, cujo noexec impede executar diretamente o resultado.
+SANDBOX não recebe o projeto e mantém `/workspace` em tmpfs também noexec.
+GDB foi validado para símbolos/breakpoints sem executar processo depurado.
+Não há volumes, devices, ferramentas embarcadas, rede de runtime nem socket.
+
+`./scripts/check-dev-c` valida a imagem local; `--build` acrescenta o build e
+requer autorização de rede. O LAB-0006 registra evidências e limitações.
+A duplicação pequena do Compose é intencional nesta validação; nenhuma base
+ou biblioteca compartilhada foi extraída. Os detalhes específicos de Python
+(pip/venv/bytecode) e C (compilação/linkedição/GDB) continuam locais a cada tool.

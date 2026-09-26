@@ -11,6 +11,7 @@ O Docker utilizado pelo ambiente é executado em modo rootless.
 
     docker/
     ├── README.md
+    ├── tools/c/
     ├── tools/python/
     │   ├── Dockerfile
     │   ├── compose.yaml
@@ -18,6 +19,7 @@ O Docker utilizado pelo ambiente é executado em modo rootless.
     └── labs/
         ├── rootless-uid/
         ├── dev-python/
+        ├── dev-c/
         ├── network-basic/
         │   └── compose.yaml
         ├── volume-basic/
@@ -49,7 +51,7 @@ A estrutura poderá evoluir aproximadamente para:
     └── services/
         └── ...
 
-tools/python já está implementado. Os demais diretórios planejados ainda
+tools/python e tools/c já estão implementados. Os demais diretórios planejados ainda
 não representam serviços ou containers existentes.
 
 Eles só devem ser criados quando houver implementação correspondente.
@@ -208,8 +210,21 @@ que exista uma necessidade real de implementação.
 - `labs/dev-python/`: bind mounts, persistência, modos e limites de recursos.
 - `../scripts/check-dev-python`: validação integrada com build e laboratórios.
 
-O diretório `tools/python` já existe; C, embedded e services continuam planejados.
+Os diretórios `tools/python` e `tools/c` já existem; embedded e services continuam planejados.
 A identidade 0:0 no desenvolvimento rootless mapeia nesta máquina para o usuário
 1000:1000 do host (ADR-0003); não é recomendação automática para produção.
 Os resultados estão nos LAB-0004 e LAB-0005. Consulte o README de tools/python
 para comandos e a separação entre código, dependências e caches temporários.
+
+## Fase 7A — C nativo Linux
+
+- `tools/c/`: Debian por tag/digest e pacotes de snapshot fixo; GCC, make,
+  CMake, Ninja, pkg-config e GDB. Mesmos modos e proteções de dev-python.
+- `labs/dev-c/` e `../scripts/check-dev-c`: compilação, execução, ownership,
+  interação host/container, GDB para símbolos/breakpoints, sem run/attach, isolamento e cgroups.
+- `../docs/LAB-0006-dev-c.md`: resultados, limites e comparação arquitetural.
+
+O build requer autorização de rede; verificações posteriores podem usar somente
+imagem local. Não há volumes ou camada compartilhada entre as ferramentas.
+Tmpfs mantém noexec: execução de binários compilados foi validada no bind EDIT
+ou TEST, não em tmpfs. Uso: [tools/c/README.md](tools/c/README.md).
