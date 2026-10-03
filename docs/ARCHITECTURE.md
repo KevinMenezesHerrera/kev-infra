@@ -60,10 +60,12 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         ├── docker/
         │   ├── tools/python/
         │   ├── tools/c/
+        │   ├── tools/embedded/
         │   └── labs/
         │       ├── rootless-uid/
         │       ├── dev-python/
         │       ├── dev-c/
+        │       ├── dev-embedded/
         │       ├── network-basic/
         │       ├── volume-basic/
         │       └── shared-network/
@@ -81,6 +83,7 @@ ele deve ser atualizado sempre que a arquitetura mudar.
         │   ├── check-infra
         │   ├── check-dev-python
         │   ├── check-dev-c
+        │   ├── check-dev-embedded
         │   └── tests/
         │       └── check-infra-test
         └── system/
@@ -378,3 +381,18 @@ requer autorização de rede. O LAB-0006 registra evidências e limitações.
 A duplicação pequena do Compose é intencional nesta validação; nenhuma base
 ou biblioteca compartilhada foi extraída. Os detalhes específicos de Python
 (pip/venv/bytecode) e C (compilação/linkedição/GDB) continuam locais a cada tool.
+
+## Cross-compilation ARM bare-metal — Fase 7B
+
+`docker/tools/embedded` contém GNU ARM GCC/binutils e make, fixados no mesmo
+snapshot/base Debian de dev-c. EDIT/TEST/SANDBOX mantêm identidade, limites,
+rede none e proteções existentes, sem devices ou novo privilégio.
+`./scripts/check-dev-embedded` usa imagem local e impede pull; `--build` é
+explícito e requer rede autorizada. Config-only não precisa do daemon.
+
+O fixture Cortex-M3 didático gera objetos, ELF, BIN, HEX e MAP sem libc/newlib.
+TEST e SANDBOX compilam/inspecionam em tmpfs noexec: firmware ARM não é executado.
+O LAB-0007 comprova essa classe de trabalho sob a fundação existente, sem provar
+funcionamento numa MCU. Reprodutibilidade foi medida: hashes iguais nos mesmos
+caminhos; MAP difere com caminhos de saída distintos. Debug permanece no ELF.
+Nenhuma base Compose, imagem ou biblioteca de runner compartilhada foi criada.

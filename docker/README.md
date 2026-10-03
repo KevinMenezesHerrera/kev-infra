@@ -12,6 +12,7 @@ O Docker utilizado pelo ambiente é executado em modo rootless.
     docker/
     ├── README.md
     ├── tools/c/
+    ├── tools/embedded/
     ├── tools/python/
     │   ├── Dockerfile
     │   ├── compose.yaml
@@ -20,6 +21,7 @@ O Docker utilizado pelo ambiente é executado em modo rootless.
         ├── rootless-uid/
         ├── dev-python/
         ├── dev-c/
+        ├── dev-embedded/
         ├── network-basic/
         │   └── compose.yaml
         ├── volume-basic/
@@ -51,7 +53,7 @@ A estrutura poderá evoluir aproximadamente para:
     └── services/
         └── ...
 
-tools/python e tools/c já estão implementados. Os demais diretórios planejados ainda
+tools/python, tools/c e tools/embedded já estão implementados. Os demais diretórios planejados ainda
 não representam serviços ou containers existentes.
 
 Eles só devem ser criados quando houver implementação correspondente.
@@ -210,7 +212,7 @@ que exista uma necessidade real de implementação.
 - `labs/dev-python/`: bind mounts, persistência, modos e limites de recursos.
 - `../scripts/check-dev-python`: validação integrada com build e laboratórios.
 
-Os diretórios `tools/python` e `tools/c` já existem; embedded e services continuam planejados.
+Os diretórios `tools/python`, `tools/c` e `tools/embedded` já existem; services continua planejado.
 A identidade 0:0 no desenvolvimento rootless mapeia nesta máquina para o usuário
 1000:1000 do host (ADR-0003); não é recomendação automática para produção.
 Os resultados estão nos LAB-0004 e LAB-0005. Consulte o README de tools/python
@@ -228,3 +230,15 @@ O build requer autorização de rede; verificações posteriores podem usar some
 imagem local. Não há volumes ou camada compartilhada entre as ferramentas.
 Tmpfs mantém noexec: execução de binários compilados foi validada no bind EDIT
 ou TEST, não em tmpfs. Uso: [tools/c/README.md](tools/c/README.md).
+
+## Fase 7B — ARM Cortex-M3 sem hardware
+
+- `tools/embedded/`: GNU ARM GCC/binutils e make por snapshot/base fixados.
+- `labs/dev-embedded/` e `../scripts/check-dev-embedded`: cross-compilation,
+  inspeção ELF/BIN/HEX, ownership, três modos, hashes e cleanup por posse.
+- `../docs/LAB-0007-dev-embedded.md`: resultados, comparação e limites.
+
+Mesmas proteções e recursos das fases anteriores, sem relaxar noexec.
+Sem devices, SDK, hardware, flashing ou emulador. Nenhuma abstração compartilhada.
+Inspeção dos artefatos não valida execução numa MCU. Build/rede são explícitos;
+a execução normal exige imagem local. Uso: [tools/embedded/README.md](tools/embedded/README.md).
